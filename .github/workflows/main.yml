@@ -37,7 +37,6 @@ jobs:
         uses: ./.github/actions/build-archive-upload
         with:
           scheme: SwiftyYTDL
-          build_settings: 'ENABLE_BITCODE=YES'
           platform: ios
 
       - name: Upload IPA
