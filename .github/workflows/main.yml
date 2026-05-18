@@ -1,4 +1,4 @@
-name: Xcode - Build and Analyze and Upload
+name: Xcode - Build IPA
 
 on:
   push:
@@ -7,37 +7,74 @@ on:
 
 jobs:
   build:
-    name: Build and analyse default scheme using xcodebuild command
     runs-on: macos-15
+
+    env:
+      CODE_SIGNING_ALLOWED: NO
+      CODE_SIGNING_REQUIRED: NO
+      CODE_SIGN_IDENTITY: ""
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache dependencies
         uses: actions/cache@v4
-        id: cache-dependecies
+        id: cache-dependencies
         with:
           path: ./Thirdparties
-          key: ${{ runner.OS }}-cache-${{ hashFiles('./bootstrap.sh') }}
+          key: ${{ runner.os }}-cache-${{ hashFiles('./bootstrap.sh') }}
           restore-keys: |
-            ${{ runner.OS }}-cache-
+            ${{ runner.os }}-cache-
 
       - name: Bootstrap
-        if: steps.cache-dependecies.outputs.cache-hit != 'true'
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: ./bootstrap.sh
         shell: bash
 
       - name: Bump version
         env:
           build_number: ${{ github.run_number }}
-        run: xcrun agvtool new-version -all $((47 + $build_number)) # temp fix
+        run: xcrun agvtool new-version -all $((47 + build_number))
 
-      - name: Build IPA (SwiftyYTDL)
-        uses: ./.github/actions/build-archive-upload
-        with:
-          scheme: SwiftyYTDL
-          platform: ios
+      - name: Build archive
+        run: |
+          xcodebuild \
+            -workspace SwiftyYTDL.xcworkspace \
+            -scheme SwiftyYTDL \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/SwiftyYTDL.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            archive
+
+      - name: Create ExportOptions.plist
+        run: |
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>development</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Export IPA
+        run: |
+          mkdir -p build/output
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/SwiftyYTDL.xcarchive \
+            -exportPath build/output \
+            -exportOptionsPlist ExportOptions.plist \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
