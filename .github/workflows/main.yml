@@ -1,4 +1,4 @@
-name: Xcode - Build IPA
+name: Build IPA
 
 on:
   push:
@@ -8,11 +8,6 @@ on:
 jobs:
   build:
     runs-on: macos-15
-
-    env:
-      CODE_SIGNING_ALLOWED: NO
-      CODE_SIGNING_REQUIRED: NO
-      CODE_SIGN_IDENTITY: ""
 
     steps:
       - name: Checkout
@@ -37,47 +32,15 @@ jobs:
           build_number: ${{ github.run_number }}
         run: xcrun agvtool new-version -all $((47 + build_number))
 
-      - name: Build archive
-        run: |
-          xcodebuild \
-            -workspace SwiftyYTDL.xcworkspace \
-            -scheme SwiftyYTDL \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath build/SwiftyYTDL.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            archive
+      - name: Build IPA
+        uses: ./.github/actions/build-archive-upload
+        with:
+          scheme: SwiftyYTDL
+          build_settings: 'CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ENABLE_BITCODE=NO'
+          platform: iOS
 
-      - name: Create ExportOptions.plist
-        run: |
-          cat > ExportOptions.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>development</string>
-              <key>signingStyle</key>
-              <string>manual</string>
-          </dict>
-          </plist>
-          EOF
-
-      - name: Export IPA
-        run: |
-          mkdir -p build/output
-
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/SwiftyYTDL.xcarchive \
-            -exportPath build/output \
-            -exportOptionsPlist ExportOptions.plist \
-            CODE_SIGNING_ALLOWED=NO
-
-      - name: Upload IPA
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SwiftyYTDL-ipa
-          path: build/output/*.ipa
+          name: SwiftyYTDL-IPA
+          path: build/SwiftyYTDL/*.ipa
