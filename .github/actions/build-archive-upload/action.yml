@@ -48,7 +48,7 @@ runs:
         <plist version="1.0">
         <dict>
             <key>method</key>
-            <string>development</string>
+            <string>debugging</string>
             <key>signingStyle</key>
             <string>manual</string>
             <key>compileBitcode</key>
@@ -74,7 +74,8 @@ runs:
           -exportArchive \
           -archivePath "$archive_file" \
           -exportPath "$export_dir" \
-          -exportOptionsPlist "$export_plist"
+          -exportOptionsPlist "$export_plist" \
+          CODE_SIGNING_ALLOWED=NO
 
         echo "IPA exported to: $export_dir"
         ls -lah "$export_dir"
