@@ -33,12 +33,15 @@ jobs:
           build_number: ${{ github.run_number }}
         run: xcrun agvtool new-version -all $((47 + $build_number)) # temp fix
 
-      - name: Build, acrhive and upload (SwiftyYTDL)
+      - name: Build IPA (SwiftyYTDL)
         uses: ./.github/actions/build-archive-upload
         with:
           scheme: SwiftyYTDL
           build_settings: 'ENABLE_BITCODE=YES'
           platform: ios
-          auth_key_issuer_id: ${{ secrets.APPSTORE_ISSUER_ID }}
-          auth_key_id: ${{ secrets.APPSTORE_API_KEY_ID }}
-          auth_key_path: ${{ steps.appstore-private-key.outputs.AUTH_KEY_PATH }}
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftyYTDL-ipa
+          path: build/output/*.ipa
